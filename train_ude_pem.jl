@@ -13,9 +13,6 @@ using LineSearches
 using Colors
 using Plots
 
-# -------------------------
-# Model and Paths Setup
-# -------------------------
 model_architecture = "_1NN"   # kept for utils/models includes if you reuse them
 utils_adjust = ""
 method = model_architecture * utils_adjust
@@ -35,13 +32,7 @@ est_all = false
 scale_NN = true
 num_inputs = [6]
 
-# -------------------------
-# Load Real Data
-# -------------------------
-df = DataFrame(CSV.File("Data/sample_1_average_output.csv", delim=',', ignorerepeated=true))
-
-# Align columns to utils expectations
-rename!(df, :Susceptible => :Never)
+df = DataFrame(CSV.File("avg_output.dat", delim=' ', ignorerepeated=true))
 println("Columns now: ", names(df))
 
 selected_df, tdata, tspan, train_n_days, ode_data, u0, max_vals = process_data(df, model)
@@ -50,9 +41,6 @@ S, T = size(ode_data)
 @assert S == 6
 const STATE_NAMES = ["Never", "Exposed", "Presymptomatic", "Symptomatic", "Asymptomatic", "Deaths"]
 
-# -------------------------
-# Build measurement interpolator y(t) in normalized space
-# -------------------------
 function make_linear_interpolator(tgrid::AbstractVector, Y::AbstractMatrix)
     @assert size(Y, 2) == length(tgrid)
     cols = [@view Y[:, i] for i in 1:length(tgrid)]
@@ -69,10 +57,6 @@ end
 
 y_of_t = make_linear_interpolator(tdata, ode_data)
 
-# -------------------------
-# κ-only PEM predictor
-#   du = κ(u;θ) * (y(t) - u), κ >= 0 (softplus)
-# -------------------------
 softplus(x) = log1p(exp(x))
 
 nn_kappa = Chain(
@@ -96,9 +80,6 @@ end
 
 prob_pred = ODEProblem((du,u,p,t)->(du .= pem_predictor(u,p,t)), u0, tspan, p0, saveat=tdata)
 
-# -------------------------
-# Loss = MSE between prediction and data
-# -------------------------
 ps = p0
 pd, pax = getdata(ps), getaxes(ps)
 
@@ -115,9 +96,6 @@ function predloss(pvec)
     return mean(e2)
 end
 
-# -------------------------
-# Optimization Setup
-# -------------------------
 adtype = Optimization.AutoZygote()
 optf   = Optimization.OptimizationFunction((x, p) -> predloss(x), adtype)
 optprob = Optimization.OptimizationProblem(optf, pd)
@@ -188,9 +166,6 @@ callback = function (p, l; doplot = true)
     return false
 end
 
-# -------------------------
-# Optimize
-# -------------------------
 res_adam = Optimization.solve(optprob, ADAM(0.01); callback = callback, maxiters = ADAM_maxiters)
 adam_loss = loss_history[end]
 println("ADAM Final Loss: ", adam_loss)
@@ -202,9 +177,6 @@ res_lbfgs      = Optimization.solve(optprob_LBFGS, LBFGS(linesearch = BackTracki
 lbfgs_loss     = loss_history[end]
 println("LBFGS Final Loss: ", lbfgs_loss)
 
-# -------------------------
-# Final plots
-# -------------------------
 p_final    = ComponentArray(res_lbfgs.u, pax)
 sol_final  = solve(prob_pred, Tsit5(); p = p_final, saveat = tdata)
 plot_u0_fitting_periodic(sol_final .* max_vals, tdata, ode_data .* max_vals, u0, iter)
