@@ -404,7 +404,7 @@ function main()
     df_sum = run_ensemble(; N=N_RUNS, outroot=OUTROOT)
     println("[INFO] Done @ ", Dates.now(), " → ", joinpath(OUTROOT, "ensemble_summary.csv"))
 
-    # Now safely generate plots (sequential)
+    # Now generate plots (sequential)
     generate_plots(; outroot=OUTROOT, N=N_RUNS)
 end
 
