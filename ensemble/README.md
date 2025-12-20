@@ -25,10 +25,11 @@ ipts to aggregate results for plotting.
 Note: the training script activates `julia_test/` as its environment, so both th
 e master and worker processes use the same dependencies.
 
-## 1) Install dependencies (one-time)
+## Install dependencies (one-time)
 From the repo root:
 julia --project=julia_test -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
 
+## How to run
 #pick 8 workers
 julia --project=julia_test --threads=1 -p 8 train_pem_ms_ensemble_multicore.jl
 
